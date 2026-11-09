@@ -30,3 +30,36 @@ async def test_rpc_status_over_unix_socket(tmp_path) -> None:
         server.close()
         await server.wait_closed()
         await controller.close()
+
+
+@pytest.mark.asyncio
+async def test_client_disconnect_while_bluetooth_command_runs() -> None:
+    """A disconnected DMS client must not crash the RPC handler."""
+
+    class Reader:
+        async def readline(self):
+            return b'{"action":"brightness","value":50}\\n'.replace(b"\\n", b"\n")
+
+    class Controller:
+        async def execute(self, action, value):
+            assert (action, value) == ("brightness", 50)
+            return {"ok": False, "error": "Bluetooth connection unavailable"}
+
+    class DisconnectedWriter:
+        closed = False
+
+        def write(self, payload):
+            assert payload
+
+        async def drain(self):
+            raise BrokenPipeError("client disconnected")
+
+        def close(self):
+            self.closed = True
+
+        async def wait_closed(self):
+            raise ConnectionResetError("client disconnected")
+
+    writer = DisconnectedWriter()
+    await handle_client(Reader(), writer, Controller())
+    assert writer.closed

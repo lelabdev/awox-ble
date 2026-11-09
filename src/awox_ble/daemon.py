@@ -39,9 +39,16 @@ async def handle_client(
     try:
         writer.write(json.dumps(result, ensure_ascii=False).encode() + b"\n")
         await writer.drain()
+    except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+        # A UI client can disconnect while a slow Bluetooth attempt is in progress.
+        # This must not become an unhandled server exception.
+        LOG.debug("Client disconnected before the BLE response was delivered")
     finally:
         writer.close()
-        await writer.wait_closed()
+        try:
+            await writer.wait_closed()
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            pass
 
 
 async def serve(path: Path | None = None, controller: LampController | None = None) -> None:
