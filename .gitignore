@@ -1,0 +1,19 @@
+# Credentials and captures NEVER belong in git
+.env
+.env.*
+config.env
+*.key
+*.pem
+*.pcap
+*.pcapng
+*btsnoop*
+*bugreport*
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.venv/
+*.egg-info/
+dist/
+build/
+.DS_Store
