@@ -15,8 +15,12 @@ PluginComponent {
     property int warmthPct: pluginData.warmth !== undefined ? Number(pluginData.warmth) : 50
     property string selectedPreset: pluginData.preset || "Custom"
     property string lastRequest: pluginData.lastRequest || "Not yet controlled"
-    property bool powerOnRequested: pluginData.powerOn !== undefined ? Boolean(pluginData.powerOn) : false
+    property bool powerOnRequested: pluginData.powerOn !== undefined
+                                    ? Boolean(pluginData.powerOn)
+                                    : ["bright", "dim", "night"].includes(pluginData.preset)
     property bool powerKnown: pluginData.powerKnown === true
+                              || (pluginData.powerKnown === undefined
+                                  && ["bright", "dim", "night"].includes(pluginData.preset))
 
     property bool brightnessDragging: false
     property bool warmthDragging: false
@@ -82,10 +86,14 @@ PluginComponent {
             return;
         }
         root.selectedPreset = preset;
-        // Presets adjust brightness/warmth but do not prove that power is on.
+        // A preset is an ON request for the toggle, not verified device state.
+        root.powerOnRequested = true;
+        root.powerKnown = true;
         root.remember("preset", preset);
         root.remember("brightness", root.brightnessPct);
         root.remember("warmth", root.warmthPct);
+        root.remember("powerOn", true);
+        root.remember("powerKnown", true);
         root.queueCommand(preset);
     }
 
@@ -151,49 +159,74 @@ PluginComponent {
                 anchors.margins: Theme.spacingM
                 spacing: Theme.spacingM
 
-                Row {
+                Item {
                     width: parent.width
                     height: 44
-                    spacing: Theme.spacingM
 
                     DIcon {
+                        id: bulbIcon
                         name: "lightbulb"
                         size: 25
                         color: Theme.primary
+                        anchors.left: parent.left
                         anchors.verticalCenter: parent.verticalCenter
                     }
 
                     Column {
-                        width: parent.width - 145
-                        spacing: 2
+                        anchors.left: bulbIcon.right
+                        anchors.leftMargin: Theme.spacingM
+                        anchors.right: powerButton.left
+                        anchors.rightMargin: Theme.spacingS
                         anchors.verticalCenter: parent.verticalCenter
+                        spacing: 2
 
                         StyledText {
                             text: "EGLO / AwoX"
+                            width: parent.width
+                            elide: Text.ElideRight
                             font.pixelSize: Theme.fontSizeMedium
                             font.bold: true
                             color: Theme.surfaceText
                         }
                         StyledText {
                             text: "Local Bluetooth control"
+                            width: parent.width
+                            elide: Text.ElideRight
                             font.pixelSize: Theme.fontSizeSmall
                             color: Theme.surfaceVariantText
                         }
                     }
 
-                    DButton {
-                        text: "On"
-                        iconName: "power"
-                        width: 48
-                        enabled: !root.busy
-                        onClicked: root.applyPower(true)
-                    }
-                    DButton {
-                        text: "Off"
-                        iconName: "power_off"
-                        width: 48
-                        enabled: !root.busy
-                        onClicked: root.applyPower(false)
+                    // A single power toggle, contained inside the header.
+                    StyledRect {
+                        id: powerButton
+                        width: 44
+                        height: 44
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        radius: Theme.cornerRadius
+                        color: root.powerKnown && root.powerOnRequested
+                               ? Theme.withAlpha(Theme.primary, 0.25)
+                               : Theme.surfaceContainerHigh
+                        border.width: root.powerKnown && root.powerOnRequested ? 1 : 0
+                        border.color: Theme.primary
+                        opacity: root.busy ? 0.5 : 1
+
+                        DIcon {
+                            name: "power_settings_new"
+                            size: 24
+                            color: root.powerKnown && root.powerOnRequested
+                                   ? Theme.primary : Theme.surfaceVariantText
+                            anchors.centerIn: parent
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            enabled: !root.busy
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.applyPower(!(root.powerKnown && root.powerOnRequested))
+                        }
                     }
                 }
 
