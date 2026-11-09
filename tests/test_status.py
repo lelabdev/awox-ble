@@ -53,7 +53,9 @@ async def test_explicit_scan_releases_before_waiting(monkeypatch, capsys) -> Non
 
     async def fake_scan(mac, timeout):
         called.append(("scan", timeout))
-        return ScanObservation(LampState(0x1234, True, 25, 3000), seen=True)
+        return ScanObservation(
+            LampState(0x1234, True, 25, 3000), seen=True, confirmed=True, frames=2
+        )
 
     monkeypatch.setattr(cli, "request", fake_request)
     monkeypatch.setattr(cli, "scan_state", fake_scan)

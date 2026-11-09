@@ -115,9 +115,15 @@ while connected. When the session is disconnected, `light status` listens for
 12 seconds; it distinguishes a detected bulb with short-only advertisements
 from one that is absent. For an independently observed brightness and colour
 temperature, use `light scan`: it **releases the active BLE connection** and
-waits up to **70 seconds** for a complete advertisement. Connect-Z bulbs may
-send many short beacons but only a few full status beacons per minute.
-After `light scan`, the next control command may have cold-connection latency.
+waits up to **70 seconds** for multiple matching, time-separated full status
+advertisements. The first full advertisement may contain an older value cached
+by BlueZ or not yet updated by the bulb. A state is only marked confirmed after
+repeated agreement at least 12 seconds into the scan. If confirmation is not
+possible before the timeout, the latest observed brightness is shown as
+**unconfirmed**, rather than being represented as a verified current value.
+Connect-Z bulbs may send many short beacons but only a few full status beacons
+per minute. After `light scan`, the next control command may have
+cold-connection latency.
 
 ### Performance and limitations
 

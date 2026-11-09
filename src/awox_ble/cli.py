@@ -48,6 +48,15 @@ def show_observation(observation: ScanObservation, timeout: float) -> int:
             file=sys.stderr,
         )
         return 2
+    if not observation.confirmed:
+        print(
+            f"Unconfirmed BLE reading ({observation.frames} full frame(s)); "
+            "the bulb may still be advertising an older value.",
+            file=sys.stderr,
+        )
+        print(f"Last observed brightness: {state.brightness}% (not verified current)")
+        print("Try `light scan` again if a confirmed current state is required.")
+        return 3
     print(f"EGLO: {'on' if state.is_on else 'off'}")
     print(f"Brightness: {state.brightness}%")
     print(f"Mesh ID: 0x{state.mesh_id:04X}")
