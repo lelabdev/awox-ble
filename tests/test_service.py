@@ -47,6 +47,24 @@ async def test_preset_sends_two_commands_using_same_session(monkeypatch) -> None
 
 
 @pytest.mark.asyncio
+async def test_night_preset_is_dim_warm_and_uses_one_session(monkeypatch) -> None:
+    instance = FakeMesh()
+    monkeypatch.setattr(service, "create", lambda cfg: instance)
+    monkeypatch.setattr(service, "load_mesh_config", lambda: object())
+    monkeypatch.setattr(
+        service.protocol, "set_brightness", lambda key, mesh, level: ("brightness", level)
+    )
+    monkeypatch.setattr(
+        service.protocol, "set_white_temperature", lambda key, mesh, warmth: ("temperature", warmth)
+    )
+    controller = service.LampController(delay=0)
+    await controller.execute("night")
+    assert instance.sent == [("brightness", 5), ("temperature", 100)]
+    assert controller.connected
+    await controller.close()
+
+
+@pytest.mark.asyncio
 async def test_invalid_values_do_not_connect(monkeypatch) -> None:
     monkeypatch.setattr(
         service, "create", lambda cfg: pytest.fail("Should not connect to Bluetooth")

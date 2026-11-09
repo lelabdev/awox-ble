@@ -11,8 +11,12 @@ from awox_mesh.connection import create
 
 from .settings import idle_seconds, load_mesh_config, preset_delay
 
-ACTIONS = {"bright", "dim", "on", "off", "brightness", "temperature"}
-PRESETS = {"bright": (100, 50), "dim": (25, 100)}  # brightness, warm-white percentage
+ACTIONS = {"bright", "dim", "night", "on", "off", "brightness", "temperature"}
+PRESETS = {
+    "bright": (100, 50),
+    "dim": (25, 100),
+    "night": (5, 100),
+}  # brightness, warm-white percentage
 
 
 class LampController:

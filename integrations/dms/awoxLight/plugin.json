@@ -1,0 +1,24 @@
+{
+  "id": "awoxLight",
+  "name": "AwoX Light",
+  "description": "Control an EGLO / AwoX Bluetooth lamp in the DMS Control Center",
+  "category": "utilities",
+  "version": "0.1.0",
+  "author": "Le Lab",
+  "type": "widget",
+  "icon": "lightbulb",
+  "component": "./AwoxLight.qml",
+  "capabilities": [
+    "control-center"
+  ],
+  "requires_dms": ">=2.0.0",
+  "repo": "https://github.com/lelabdev/awox-ble",
+  "compositors": ["any"],
+  "distro": ["any"],
+  "dependencies": ["light"],
+  "permissions": [
+    "process",
+    "settings_read",
+    "settings_write"
+  ]
+}

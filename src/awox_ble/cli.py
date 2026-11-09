@@ -123,6 +123,7 @@ def main() -> int:
             "service-status",
             "bright",
             "dim",
+            "night",
             "on",
             "off",
             "brightness",

@@ -89,6 +89,7 @@ light scan            # fresh verified BLE advertisement; may take up to 70 s
 light brightness 50   # 50% brightness
 light bright          # preset: 100%, neutral white
 light dim             # preset: 25%, warm white
+light night           # preset: 5%, very warm white
 light on              # power on
 light off             # power off
 light temperature 80  # warmer white
@@ -151,6 +152,32 @@ To adjust idle time or preset spacing, edit
 - `AWOX_BLE_SOCKET`: optional socket location
 
 Then run `systemctl --user daemon-reload && systemctl --user restart awox-ble.service`.
+
+## Dank Material Shell (DMS) integration
+
+The included [DMS Control Center plugin](integrations/dms/awoxLight/) adds an
+**AwoX Light** tile, similar to DMS's Tailscale and VPN tiles. Clicking it
+opens the native Control Center detail panel, with:
+
+- Two sliders for brightness (0–100%) and white warmth (0–100%, cool to warm).
+- **Bright** (100%, neutral), **Dim** (25%, warm), **Night** (5%, warm) presets.
+- Separate **On** and **Off** buttons.
+
+The sliders send **one command on release**, not continuous commands while dragging.
+Their displayed values are the **last requested values** and are not independently
+verified BLE readings; use `light scan` for that.
+
+Once `light` and the service are installed, enable the integration:
+
+```bash
+mkdir -p ~/.config/DankMaterialShell/plugins
+ln -s "$PWD/integrations/dms/awoxLight" \
+  ~/.config/DankMaterialShell/plugins/awoxLight
+```
+
+Then enable **AwoX Light** in DMS Settings → Plugins, and add the AwoX Light
+tile in Control Center → Edit. This integration requires DMS 2.0 or newer and
+does not open a separate desktop window.
 
 ## Related projects and protocol references
 
