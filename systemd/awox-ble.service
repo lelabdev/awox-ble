@@ -6,6 +6,9 @@ After=bluetooth.target
 Type=simple
 ExecStart=%h/.local/share/awox-ble/.venv/bin/awox-ble-daemon
 WorkingDirectory=%h/.local/share/awox-ble
+# systemd user services can start with a minimal PATH, especially after boot.
+# gatttool is installed in ~/.local/bin; make it available to the BLE backend.
+Environment="PATH=%h/.local/bin:/usr/local/bin:/usr/bin"
 Environment=PYTHONUNBUFFERED=1
 Environment=AWOX_BLE_IDLE_SECONDS=120
 Environment=AWOX_BLE_PRESET_DELAY=2.5
