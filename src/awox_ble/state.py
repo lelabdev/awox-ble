@@ -1,4 +1,4 @@
-"""Read unencrypted status advertisements without opening a mesh session."""
+"""Read unencrypted BLE advertisements without opening a mesh session."""
 
 from __future__ import annotations
 
@@ -14,6 +14,14 @@ class LampState:
     is_on: bool
     brightness: int
     temperature_kelvin: int | None
+
+
+@dataclass(frozen=True)
+class ScanObservation:
+    """Distinguish short advertisements from a missing device."""
+
+    state: LampState | None
+    seen: bool
 
 
 def decode_advert(company: int, data: bytes) -> LampState | None:
@@ -34,22 +42,30 @@ def decode_advert(company: int, data: bytes) -> LampState | None:
     )
 
 
-async def read_state(mac: str, timeout: float = 35) -> LampState | None:
-    found = asyncio.Event()
+async def scan_state(mac: str, timeout: float = 12) -> ScanObservation:
+    """Wait for a complete frame; remember if shorter beacons are present."""
+    full_frame = asyncio.Event()
     state: LampState | None = None
+    seen = False
 
     def callback(device, advert) -> None:
-        nonlocal state
+        nonlocal state, seen
         if device.address.upper() != mac.upper():
             return
+        seen = True
         data = advert.manufacturer_data.get(0x0160, b"")
         state = decode_advert(0x0160, data) or state
         if state is not None:
-            found.set()
+            full_frame.set()
 
     async with BleakScanner(detection_callback=callback):
         try:
-            await asyncio.wait_for(found.wait(), timeout)
+            await asyncio.wait_for(full_frame.wait(), timeout)
         except TimeoutError:
             pass
-    return state
+    return ScanObservation(state=state, seen=seen)
+
+
+async def read_state(mac: str, timeout: float = 12) -> LampState | None:
+    """Compatibility helper for callers that only need complete status."""
+    return (await scan_state(mac, timeout)).state

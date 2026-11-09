@@ -84,7 +84,8 @@ Keep your actual password, address, mobile diagnostic logs and captures private.
 ### 4. Use the light
 
 ```bash
-light status          # passive scan: power, brightness and white temperature
+light status          # fast status: last request while connected, or short passive scan
+light scan            # fresh verified BLE advertisement; may take up to 70 s
 light brightness 50   # 50% brightness
 light bright          # preset: 100%, neutral white
 light dim             # preset: 25%, warm white
@@ -106,8 +107,17 @@ Other useful commands:
 The service **does not connect at startup**. It connects when a control
 command is issued, keeps the session active for up to **120 seconds after the
 last command**, then disconnects so AwoX HomeControl on a phone can reconnect.
-The `light status` command only listens for advertisements, so it may take
-longer if the lamp is not broadcasting complete status frames.
+
+**Status vs. fresh scan:** When the BLE session is connected, `light status`
+responds immediately with the last *requested* command and explicitly marks
+it **unverified**. The light does not normally broadcast its full status
+while connected. When the session is disconnected, `light status` listens for
+12 seconds; it distinguishes a detected bulb with short-only advertisements
+from one that is absent. For an independently observed brightness and colour
+temperature, use `light scan`: it **releases the active BLE connection** and
+waits up to **70 seconds** for a complete advertisement. Connect-Z bulbs may
+send many short beacons but only a few full status beacons per minute.
+After `light scan`, the next control command may have cold-connection latency.
 
 ### Performance and limitations
 
@@ -119,7 +129,8 @@ Presets send brightness first and colour temperature second, with a **2.5 s
 delay** because this firmware may silently drop rapid consecutive commands.
 These presets have not yet been independently verified on all hardware.
 A successful GATT write does **not** guarantee that the light applied the
-new setting; `light status` can verify a later advertisement.
+new setting. Use `light scan` for independent confirmation from a full
+Bluetooth advertisement.
 
 The service listens only on the user-accessible Unix socket
 `$XDG_RUNTIME_DIR/awox-ble.sock` (mode `0600`), not on a TCP port.

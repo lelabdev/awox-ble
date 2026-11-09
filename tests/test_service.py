@@ -1,4 +1,3 @@
-
 import pytest
 
 from awox_ble import service

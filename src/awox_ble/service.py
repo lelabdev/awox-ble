@@ -22,6 +22,7 @@ class LampController:
         self._lock = asyncio.Lock()
         self._mesh: Any | None = None
         self._last_used = 0.0
+        self._last_command: dict[str, Any] | None = None
 
     @property
     def connected(self) -> bool:
@@ -49,6 +50,7 @@ class LampController:
                     "ok": True,
                     "connected": self.connected,
                     "idle_seconds": self.idle,
+                    "last_command": self._last_command,
                     "message": "Connected" if self.connected else "Disconnected",
                 }
             if action == "release":
@@ -71,15 +73,14 @@ class LampController:
             else:
                 brightness, temperature = PRESETS[action]
                 # Brightness first: it has a visible effect as quickly as possible.
-                await self._send(
-                    lambda key, mid: protocol.set_brightness(key, mid, brightness)
-                )
+                await self._send(lambda key, mid: protocol.set_brightness(key, mid, brightness))
                 # Firmware 3.0.2 drops tightly-spaced writes; keep a configurable gap.
                 await asyncio.sleep(self.delay)
                 await self._send(
                     lambda key, mid: protocol.set_white_temperature(key, mid, temperature)
                 )
             self._last_used = time.monotonic()
+            self._last_command = {"action": action, "value": value}
             return {
                 "ok": True,
                 "connected": self.connected,
@@ -94,8 +95,10 @@ class LampController:
             if self._mesh is None:
                 continue
             async with self._lock:
-                if self._mesh is not None and self._last_used and (
-                    time.monotonic() - self._last_used >= self.idle
+                if (
+                    self._mesh is not None
+                    and self._last_used
+                    and (time.monotonic() - self._last_used >= self.idle)
                 ):
                     await self._disconnect()
 
