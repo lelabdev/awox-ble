@@ -157,19 +157,11 @@ Then run `systemctl --user daemon-reload && systemctl --user restart awox-ble.se
 
 ![AwoX Light tile and expanded controls in the DMS Control Center](assets/dms-control-center.png)
 
-The included [DMS Control Center plugin](integrations/dms/awoxLight/) adds an
-**AwoX Light** tile, similar to DMS's Tailscale and VPN tiles. Clicking it
-opens the native Control Center detail panel, with:
+The optional [DMS plugin](integrations/dms/awoxLight/) uses the same
+`light` service. Sliders apply changes when released; displayed values are
+last requested settings, not verified device readings (use `light scan` to check).
 
-- Two sliders for brightness (0–100%) and white warmth (0–100%, cool to warm).
-- **Bright** (100%, neutral), **Dim** (25%, warm), **Night** (5%, warm) presets.
-- A single **power toggle** for on/off, matching the DMS Control Center style.
-
-The sliders send **one command on release**, not continuous commands while dragging.
-Their displayed values are the **last requested values** and are not independently
-verified BLE readings; use `light scan` for that.
-
-Once `light` and the service are installed, enable the integration:
+After installing and configuring `light`, enable the plugin:
 
 ```bash
 mkdir -p ~/.config/DankMaterialShell/plugins
