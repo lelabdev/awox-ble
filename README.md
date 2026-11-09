@@ -9,6 +9,43 @@ socket instead of reconnecting to the lamp on every action.
 
 This is an independent project, not a fork of the upstream BLE protocol library.
 
+## Tested light
+
+The initial hardware test was performed with:
+
+| Property | Value |
+| --- | --- |
+| Brand / product | **EGLO Filament Zigbee TW** |
+| Bluetooth-reported model | `ESMLFzm_w6_TW` |
+| Hardware revision | `4.63` |
+| Tested firmware | `3.0.2_1610` |
+| Mobile application | AwoX HomeControl |
+| Connection | Bluetooth Low Energy, using the AwoX Connect-Z mesh protocol |
+
+Although this bulb is sold as **Zigbee**, this project communicates with its
+**Bluetooth** interface. A Zigbee coordinator is not required. This is the
+hardware actually tested; compatibility with other AwoX/EGLO models is not
+yet verified.
+
+## Related projects and protocol references
+
+- **[paul-schoettl/awox-mesh](https://github.com/paul-schoettl/awox-mesh)**:
+  Python BLE mesh implementation used as a pinned dependency. Provides
+  session authentication, encryption, connection handling and low-level commands.
+- **[BastiAKA/awoxble2mqtt-api](https://github.com/BastiAKA/awoxble2mqtt-api)**:
+  independent Connect-Z implementation and reverse-engineered packet
+  formats. An important reference when debugging EGLO Zigbee/Connect-Z
+  brightness, white temperature and power commands.
+- **[fsaris/EspHome-AwoX-BLE-mesh-hub](https://github.com/fsaris/EspHome-AwoX-BLE-mesh-hub)**:
+  ESPHome-based AwoX BLE mesh work and the
+  [AwoX mesh credentials tool](https://fsaris.github.io/EspHome-AwoX-BLE-mesh-hub/awoxh-mesh-credentials-tool/).
+  This tool can help retrieve mesh credentials, but credentials reported
+  by the cloud do not necessarily match the local authentication accepted
+  by every device or firmware.
+
+Keep recovered passwords, connection captures and device-specific identifiers
+out of Git history and issue reports.
+
 ## Commands
 
 | Command | Effect |
@@ -44,7 +81,9 @@ systemctl --user enable --now awox-ble.service
 AwoX BLE credentials belong in `~/.config/awox-mesh/config.env` with
 permissions `0600`. They are **not part of this repository**. Configure
 `AWOX_MAC`, `AWOX_MESH_NAME`, `AWOX_MESH_PASSWORD`,
-`AWOX_MESH_ID`, and `AWOX_BACKEND=gatt`.
+`AWOX_MESH_ID`, and `AWOX_BACKEND=gatt`. The credentials tool linked
+above can be used as a starting point; verify the actual local authentication
+on your own device rather than publishing or assuming a universal password.
 
 ## Session and performance
 
