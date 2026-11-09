@@ -13,6 +13,7 @@
   ],
   "requires_dms": ">=2.0.0",
   "repo": "https://github.com/lelabdev/awox-ble",
+  "screenshot": "https://raw.githubusercontent.com/lelabdev/awox-ble/main/assets/dms-control-center.png",
   "compositors": ["any"],
   "distro": ["any"],
   "dependencies": ["light"],

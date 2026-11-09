@@ -155,13 +155,15 @@ Then run `systemctl --user daemon-reload && systemctl --user restart awox-ble.se
 
 ## Dank Material Shell (DMS) integration
 
+![AwoX Light tile and expanded controls in the DMS Control Center](assets/dms-control-center.png)
+
 The included [DMS Control Center plugin](integrations/dms/awoxLight/) adds an
 **AwoX Light** tile, similar to DMS's Tailscale and VPN tiles. Clicking it
 opens the native Control Center detail panel, with:
 
 - Two sliders for brightness (0–100%) and white warmth (0–100%, cool to warm).
 - **Bright** (100%, neutral), **Dim** (25%, warm), **Night** (5%, warm) presets.
-- Separate **On** and **Off** buttons.
+- A single **power toggle** for on/off, matching the DMS Control Center style.
 
 The sliders send **one command on release**, not continuous commands while dragging.
 Their displayed values are the **last requested values** and are not independently
