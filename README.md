@@ -1,123 +1,165 @@
 # awox-ble
 
-Fast, local control of AwoX / EGLO Connect-Z Bluetooth lighting from Linux.
+Control AwoX / EGLO Bluetooth lights from Linux, without a cloud service or
+Zigbee coordinator. Written in Python, based on the
+[awox-mesh](https://github.com/paul-schoettl/awox-mesh) BLE implementation.
 
-Python is used to reuse the [awox-mesh](https://github.com/paul-schoettl/awox-mesh)
-protocol implementation. A user-level systemd service holds a **single BLE
-session**, and the small `light` CLI communicates with it over a private Unix
-socket instead of reconnecting to the lamp on every action.
+The `awox-ble` **systemd user service** keeps one authenticated Bluetooth
+session open between commands. The lightweight `light` CLI talks to that
+service through a private Unix socket, avoiding repeated pairing delays.
 
-This is an independent project, not a fork of the upstream BLE protocol library.
+## Tested hardware
 
-## Tested light
-
-The initial hardware test was performed with:
-
-| Property | Value |
+| Property | Tested device |
 | --- | --- |
-| Brand / product | **EGLO Filament Zigbee TW** |
-| Bluetooth-reported model | `ESMLFzm_w6_TW` |
+| Product | **EGLO Filament Zigbee TW** |
+| Bluetooth model | `ESMLFzm_w6_TW` |
 | Hardware revision | `4.63` |
-| Tested firmware | `3.0.2_1610` |
-| Mobile application | AwoX HomeControl |
-| Connection | Bluetooth Low Energy, using the AwoX Connect-Z mesh protocol |
+| Firmware | `3.0.2_1610` |
+| Companion app | AwoX HomeControl |
+| Transport | Bluetooth Low Energy, AwoX Connect-Z mesh |
 
-Although this bulb is sold as **Zigbee**, this project communicates with its
-**Bluetooth** interface. A Zigbee coordinator is not required. This is the
-hardware actually tested; compatibility with other AwoX/EGLO models is not
-yet verified.
+Despite the **Zigbee** branding, this project uses the bulb's **Bluetooth**
+interface. No Zigbee adapter is required. Other models and firmware versions
+may behave differently and have **not** been verified.
 
-## Related projects and protocol references
+## Quick start (Linux)
 
-- **[paul-schoettl/awox-mesh](https://github.com/paul-schoettl/awox-mesh)**:
-  Python BLE mesh implementation used as a pinned dependency. Provides
-  session authentication, encryption, connection handling and low-level commands.
-- **[BastiAKA/awoxble2mqtt-api](https://github.com/BastiAKA/awoxble2mqtt-api)**:
-  independent Connect-Z implementation and reverse-engineered packet
-  formats. An important reference when debugging EGLO Zigbee/Connect-Z
-  brightness, white temperature and power commands.
-- **[fsaris/EspHome-AwoX-BLE-mesh-hub](https://github.com/fsaris/EspHome-AwoX-BLE-mesh-hub)**:
-  ESPHome-based AwoX BLE mesh work and the
-  [AwoX mesh credentials tool](https://fsaris.github.io/EspHome-AwoX-BLE-mesh-hub/awoxh-mesh-credentials-tool/).
-  This tool can help retrieve mesh credentials, but credentials reported
-  by the cloud do not necessarily match the local authentication accepted
-  by every device or firmware.
+### 1. Prerequisites
 
-Keep recovered passwords, connection captures and device-specific identifiers
-out of Git history and issue reports.
+- Python 3.12 or newer (automatically managed by [uv](https://docs.astral.sh/uv/)).
+- `git`, `uv`, `systemd --user`, BlueZ, and a functioning BLE adapter.
+- **`gatttool`** available on `PATH`: the selected upstream GATT backend
+  needs this **legacy BlueZ utility**. It is not bundled with all modern
+  distributions. If `command -v gatttool` fails, install a compatible
+  legacy BlueZ/GATT tool before proceeding.
+- Your own AwoX/EGLO Bluetooth lamp credentials.
 
-## Commands
+This was developed on Arch Linux; other Linux distributions are untested.
 
-| Command | Effect |
-| --- | --- |
-| `light` or `light status` | Read passive BLE advertisements; no connection required |
-| `light service-status` | Inspect the daemon's current connection |
-| `light bright` | Preset: 100% brightness, neutral white |
-| `light dim` | Preset: 25% brightness, warm white |
-| `light on`, `light off` | Switch power |
-| `light brightness 50` | Set brightness from 0 to 100% |
-| `light temperature 80` | Set warm-white percentage |
-| `light release` | Disconnect so the phone app can connect |
-
-Commands are sent over a socket at `$XDG_RUNTIME_DIR/awox-ble.sock`,
-with mode `0600`. No HTTP endpoint, account, or cloud is needed.
-
-## Install
-
-Requires Arch Linux or a compatible Linux system with BlueZ, `gatttool`,
-and [uv](https://docs.astral.sh/uv/).
+### 2. Install the controller
 
 ```bash
 git clone https://github.com/lelabdev/awox-ble.git
 cd awox-ble
-uv sync --locked
-ln -s "$PWD/.venv/bin/light" ~/.local/bin/light
-mkdir -p ~/.config/systemd/user
-ln -s "$PWD/systemd/awox-ble.service" ~/.config/systemd/user/awox-ble.service
-systemctl --user daemon-reload
-systemctl --user enable --now awox-ble.service
+bash scripts/install.sh
 ```
 
-AwoX BLE credentials belong in `~/.config/awox-mesh/config.env` with
-permissions `0600`. They are **not part of this repository**. Configure
-`AWOX_MAC`, `AWOX_MESH_NAME`, `AWOX_MESH_PASSWORD`,
-`AWOX_MESH_ID`, and `AWOX_BACKEND=gatt`. The credentials tool linked
-above can be used as a starting point; verify the actual local authentication
-on your own device rather than publishing or assuming a universal password.
+The installer installs locked Python dependencies, creates the `light` command,
+and enables `awox-ble.service` for the current user. You do not need root for
+the installer. The service can be installed from **any clone directory**.
 
-## Session and performance
+The installer does not alter your lamp. It does not overwrite an existing
+`~/.config/awox-mesh/config.env`, and on first install copies the example
+configuration there with permissions `0600`.
 
-The service does not contact or change the light on startup. It connects on
-the first control request and reuses the authenticated connection for
-subsequent requests. It releases the connection after **120 seconds** without
-commands to let the mobile app access the same bulb. `light release`
-disconnects immediately.
+### 3. Configure your own bulb
 
-On the initial EGLO device, the measured latency for a brightness command
-was 4.17 s (cold) versus 0.20 s (warm). Latency varies with the Bluetooth
-adapter, firmware, and connection state.
+Edit `~/.config/awox-mesh/config.env`. It should contain:
 
-Presets currently send brightness first and color temperature second, with
-a configurable 2.5 s gap; the firmware may drop rapid consecutive writes.
-Successful GATT writes are *not* equivalent to verified lamp state. Use
-`light status` for an independent status advertisement.
+```ini
+# EXAMPLE VALUES ONLY — replace all of them with your bulb's values
+AWOX_MAC=AA:BB:CC:DD:EE:FF
+AWOX_MESH_NAME=your_mesh_name
+AWOX_MESH_PASSWORD=your_local_mesh_password
+AWOX_MESH_ID=0x1234
+AWOX_BACKEND=gatt
+```
 
-Customize these settings through the user service environment:
+How to find the values:
 
-- `AWOX_BLE_IDLE_SECONDS` — seconds before disconnecting (default 120)
-- `AWOX_BLE_PRESET_DELAY` — gap between preset writes (default 2.5)
-- `AWOX_BLE_SOCKET` — optional custom Unix socket path
+- **MAC address**: use `uv run awox-mesh scan` or a BLE scanner.
+- **Mesh address**: use `uv run awox-mesh discover` to read the lamp's
+  advertised address; `AWOX_MESH_ID` is not the same as its Bluetooth MAC.
+- **Mesh name and password**: consult the [AwoX mesh credentials
+  tool](https://fsaris.github.io/EspHome-AwoX-BLE-mesh-hub/awoxh-mesh-credentials-tool/).
+  **Important:** credentials returned by the cloud may not be the actual
+  credentials accepted locally by certain firmware revisions. If login is
+  rejected with `0x0e`, verify your bulb's local authentication rather than
+  assuming a universal factory password.
+
+Keep your actual password, address, mobile diagnostic logs and captures private.
+**Never commit the populated configuration file.**
+
+### 4. Use the light
+
+```bash
+light status          # passive scan: power, brightness and white temperature
+light brightness 50   # 50% brightness
+light bright          # preset: 100%, neutral white
+light dim             # preset: 25%, warm white
+light on              # power on
+light off             # power off
+light temperature 80  # warmer white
+```
+
+Other useful commands:
+
+| Command | Description |
+| --- | --- |
+| `light` | Same as `light status` |
+| `light service-status` | Check whether the background session is connected |
+| `light release` | Disconnect immediately, allowing the mobile app to connect |
+| `systemctl --user status awox-ble.service` | Inspect the daemon |
+| `journalctl --user -u awox-ble.service -n 50` | View daemon logs |
+
+The service **does not connect at startup**. It connects when a control
+command is issued, keeps the session active for up to **120 seconds after the
+last command**, then disconnects so AwoX HomeControl on a phone can reconnect.
+The `light status` command only listens for advertisements, so it may take
+longer if the lamp is not broadcasting complete status frames.
+
+### Performance and limitations
+
+On the tested EGLO bulb, a simple brightness command took **4.17 s cold**
+versus **0.20 s with the connection already open**. Actual timings depend on
+radio conditions and the hardware.
+
+Presets send brightness first and colour temperature second, with a **2.5 s
+delay** because this firmware may silently drop rapid consecutive commands.
+These presets have not yet been independently verified on all hardware.
+A successful GATT write does **not** guarantee that the light applied the
+new setting; `light status` can verify a later advertisement.
+
+The service listens only on the user-accessible Unix socket
+`$XDG_RUNTIME_DIR/awox-ble.sock` (mode `0600`), not on a TCP port.
+Only one control request runs at a time.
+
+To adjust idle time or preset spacing, edit
+`~/.config/systemd/user/awox-ble.service` or add a systemd drop-in with
+`systemctl --user edit awox-ble.service`:
+
+- `AWOX_BLE_IDLE_SECONDS`: inactivity timeout (default 120 seconds)
+- `AWOX_BLE_PRESET_DELAY`: delay between preset writes (default 2.5 seconds)
+- `AWOX_BLE_SOCKET`: optional socket location
+
+Then run `systemctl --user daemon-reload && systemctl --user restart awox-ble.service`.
+
+## Related projects and protocol references
+
+- [paul-schoettl/awox-mesh](https://github.com/paul-schoettl/awox-mesh):
+  the pinned Python dependency implementing AwoX BLE authentication,
+  session encryption and device control.
+- [BastiAKA/awoxble2mqtt-api](https://github.com/BastiAKA/awoxble2mqtt-api):
+  another implementation with reverse-engineered Connect-Z packets for
+  brightness, colour temperature and power.
+- [fsaris/EspHome-AwoX-BLE-mesh-hub](https://github.com/fsaris/EspHome-AwoX-BLE-mesh-hub):
+  a related ESPHome mesh project and the credentials tool linked above.
+
+This repository implements a local controller and does not claim ownership of
+the upstream BLE protocol implementation.
 
 ## Development
 
 ```bash
-uv sync --group dev
+uv sync --locked --group dev
 uv run pytest -q
 uv run ruff check .
 ```
 
-Tests use a fake mesh; they do not switch any physical lights.
+Tests use simulated connections; they **do not operate a real bulb**.
+The service also sends **no commands automatically** when it starts.
 
 ## License
 
-MIT. The pinned upstream `awox-mesh` dependency is also MIT licensed.
+MIT. The upstream `awox-mesh` dependency is separately MIT licensed.

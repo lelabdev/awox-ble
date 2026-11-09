@@ -4,8 +4,8 @@ After=bluetooth.target
 
 [Service]
 Type=simple
-ExecStart=%h/1Dev/Projects/awox-ble/.venv/bin/awox-ble-daemon
-WorkingDirectory=%h/1Dev/Projects/awox-ble
+ExecStart=%h/.local/share/awox-ble/.venv/bin/awox-ble-daemon
+WorkingDirectory=%h/.local/share/awox-ble
 Environment=PYTHONUNBUFFERED=1
 Environment=AWOX_BLE_IDLE_SECONDS=120
 Environment=AWOX_BLE_PRESET_DELAY=2.5
